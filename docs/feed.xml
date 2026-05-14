@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Tokyo Weather Music</title>
+    <link>https://GITHUB_REPOSITORY_OWNER.github.io/tokyo-weather-music</link>
+    <description>東京の毎日の天候をテーマにした自動生成インストゥルメンタル音楽</description>
+    <language>ja</language>
+    <itunes:category text="Music"/>
+    <itunes:explicit>false</itunes:explicit>
+  </channel>
+</rss>
