@@ -1,0 +1,37 @@
+name: Daily Tokyo Weather Music
+
+on:
+  schedule:
+    - cron: '0 21 * * *'   # UTC 21:00 = JST 06:00
+  workflow_dispatch:         # 手動トリガー（テスト用）
+
+jobs:
+  generate-and-upload:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # podcast.pyのgit push用（Phase 2）
+      issues: write          # 失敗通知用
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily music generation
+        run: python src/main.py
+        env:
+          ANTHROPIC_API_KEY:      ${{ secrets.ANTHROPIC_API_KEY }}
+          SUNO_COOKIE:            ${{ secrets.SUNO_COOKIE }}
+          YOUTUBE_CLIENT_ID:      ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET:  ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN:  ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          GITHUB_TOKEN:           ${{ secrets.GITHUB_TOKEN }}
