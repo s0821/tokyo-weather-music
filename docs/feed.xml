@@ -1,11 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">
   <channel>
     <title>Tokyo Weather Music</title>
     <link>https://GITHUB_REPOSITORY_OWNER.github.io/tokyo-weather-music</link>
     <description>東京の毎日の天候をテーマにした自動生成インストゥルメンタル音楽</description>
     <language>ja</language>
-    <itunes:category text="Music"/>
+    <itunes:category text="Music" />
     <itunes:explicit>false</itunes:explicit>
-  </channel>
+  <item><title>晴れわたる五月の朝霧</title><description>2026年5月15日、東京は晴れ。気温14度、湿度95%という春特有のしっとりとした空気の中、雨上がりの朝のような静けさが街を包んでいます。このトラックは、そんな五月の澄んだ朝霧が光の中でゆっくりと溶けていく情景をイメージして制作しました。柔らかなピアノと琴の音色が絡み合い、ヴァイナルの温かみある質感とともに、春の朝の儚さと清らかさを表現しています。通勤前のひとり時間、窓越しに空を眺めながら、または深呼吸したいそんな瞬間に寄り添う一曲です。</description><enclosure url="https://s0821.github.io/tokyo-weather-music/episodes/2026-05-15.mp3" type="audio/mpeg" length="360513" /><pubDate>Sat, 16 May 2026 06:00:00 +0900</pubDate><guid>2026-05-15</guid></item></channel>
 </rss>
