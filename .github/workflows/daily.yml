@@ -2,7 +2,7 @@ name: Daily Tokyo Weather Music
 
 on:
   schedule:
-    - cron: '0 21 * * *'   # UTC 21:00 = JST 06:00
+    - cron: '0 */6 * * *'  # UTC 0,6,12,18時 = JST 9,15,21,3時（6時間おき）
   workflow_dispatch:         # 手動トリガー（テスト用）
 
 jobs:

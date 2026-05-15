@@ -1,12 +1,14 @@
 import os
 import subprocess
-from datetime import date
+from datetime import datetime, timezone, timedelta
 
 from src.weather import get_weather
 from src.prompt import generate_prompt
 from src.suno import generate_music
 from src.thumbnail import create_thumbnail
 from src.youtube import upload_to_youtube
+
+JST = timezone(timedelta(hours=9))
 
 
 def _notify_failure(module, error):
@@ -21,7 +23,9 @@ def _notify_failure(module, error):
 
 
 def run():
-    today = str(date.today())
+    now_jst = datetime.now(JST)
+    today = now_jst.strftime("%Y-%m-%d")
+    timestamp = now_jst.strftime("%Y-%m-%d_%H%M")
 
     # 1. 天気取得
     try:
@@ -36,7 +40,7 @@ def run():
     print("[main] プロンプト生成完了: {}".format(prompt_data["title_ja"]))
 
     # 3. SUNO音楽生成
-    audio_path = "/tmp/tokyo_music_{}.mp3".format(today)
+    audio_path = "/tmp/tokyo_music_{}.mp3".format(timestamp)
     try:
         generate_music(prompt_data["suno_prompt"], output_path=audio_path)
         print("[main] 音楽生成完了: {}".format(audio_path))
@@ -45,7 +49,7 @@ def run():
         return
 
     # 4. サムネイル生成（失敗してもデフォルト画像で続行）
-    thumb_path = "/tmp/thumbnail_{}.png".format(today)
+    thumb_path = "/tmp/thumbnail_{}.png".format(timestamp)
     thumbnail = create_thumbnail(
         title_ja=prompt_data["title_ja"],
         title_en=prompt_data["title_en"],
