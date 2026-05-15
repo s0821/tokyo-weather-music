@@ -2,80 +2,69 @@ import os
 import time
 import requests
 
-# SUNOのAPIエンドポイント（フォールバック付き）
-SUNO_BASES = [
-    "https://studio-api.suno.ai",
-    "https://suno.com",
-]
-SUNO_BASE = SUNO_BASES[0]
+REPLICATE_API = "https://api.replicate.com/v1"
+# Meta MusicGen large model
+MUSICGEN_VERSION = "671ac645ce5e552cc63a54a2bbff63fcf798043692f5338c52cd4341eb65b5"
 DEFAULT_OUTPUT = "/tmp/suno_output.mp3"
 
 
-def _extract_jwt(cookie_str):
-    """SUNO_COOKIE から JWT 値を取り出す。
-    形式: "__session=eyJ..." → "eyJ..." を返す
-    """
-    for part in cookie_str.split(";"):
-        part = part.strip()
-        if part.startswith("__session="):
-            return part[len("__session="):]
-    # フォールバック: 値全体を返す（旧形式のトークン文字列の場合）
-    return cookie_str.strip()
+def _start_prediction(prompt, duration=60):
+    token = os.environ["REPLICATE_API_TOKEN"]
+    resp = requests.post(
+        "{}/predictions".format(REPLICATE_API),
+        headers={
+            "Authorization": "Token {}".format(token),
+            "Content-Type": "application/json",
+        },
+        json={
+            "version": MUSICGEN_VERSION,
+            "input": {
+                "prompt": prompt,
+                "model_version": "large",
+                "output_format": "mp3",
+                "normalization_strategy": "peak",
+                "duration": duration,
+            },
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["id"]
 
 
-def _poll_until_complete(clip_id, jwt, max_polls=40, interval=30):
-    headers = {"Authorization": "Bearer {}".format(jwt)}
+def _poll_prediction(prediction_id, max_polls=40, interval=15):
+    token = os.environ["REPLICATE_API_TOKEN"]
+    headers = {"Authorization": "Token {}".format(token)}
     for _ in range(max_polls):
         resp = requests.get(
-            "{}/api/feed/?ids={}".format(SUNO_BASE, clip_id),
+            "{}/predictions/{}".format(REPLICATE_API, prediction_id),
             headers=headers,
             timeout=15,
         )
         resp.raise_for_status()
         data = resp.json()
-        # 新APIは clips リストまたは直接オブジェクトを返す場合がある
-        clips = data.get("clips") or data.get("data") or [data]
-        if clips:
-            clip = clips[0]
-            if clip.get("status") == "complete" and clip.get("audio_url"):
-                return clip["audio_url"]
+        status = data.get("status")
+        if status == "succeeded":
+            output = data.get("output")
+            if isinstance(output, list):
+                return output[0]
+            return output
+        if status in ("failed", "canceled"):
+            raise RuntimeError("MusicGen失敗: {}".format(data.get("error", status)))
         time.sleep(interval)
-    raise RuntimeError("タイムアウト: clip_id={} が{}回のポーリングで完了しなかった".format(clip_id, max_polls))
+    raise RuntimeError("タイムアウト: prediction_id={}".format(prediction_id))
 
 
 def generate_music(suno_prompt, output_path=DEFAULT_OUTPUT, max_retries=3):
-    cookie_str = os.environ.get("SUNO_COOKIE", "")
-    jwt = _extract_jwt(cookie_str)
     last_error = None
-
     for attempt in range(max_retries):
         try:
-            headers = {
-                "Authorization": "Bearer {}".format(jwt),
-                "Content-Type": "application/json",
-            }
-            payload = {
-                "prompt": suno_prompt,
-                "mv": "chirp-v4-5",  # 最新モデル
-                "title": "",
-                "tags": "instrumental ambient lofi",
-                "make_instrumental": True,
-                "generation_type": "TEXT",
-            }
-            gen_resp = requests.post(
-                "{}/api/generate/v2/".format(SUNO_BASE),
-                json=payload,
-                headers=headers,
-                timeout=30,
-            )
-            gen_resp.raise_for_status()
-            resp_data = gen_resp.json()
-            clips = resp_data.get("clips") or resp_data.get("data") or [resp_data]
-            clip_id = clips[0]["id"]
+            prediction_id = _start_prediction(suno_prompt)
+            print("[suno] MusicGen生成開始: id={}".format(prediction_id))
 
-            audio_url = _poll_until_complete(clip_id, jwt)
+            audio_url = _poll_prediction(prediction_id)
 
-            dl_resp = requests.get(audio_url, timeout=60)
+            dl_resp = requests.get(audio_url, timeout=120)
             dl_resp.raise_for_status()
             with open(output_path, "wb") as f:
                 f.write(dl_resp.content)
