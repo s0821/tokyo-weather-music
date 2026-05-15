@@ -38,7 +38,7 @@ def run():
     # 3. SUNO音楽生成
     audio_path = "/tmp/tokyo_music_{}.mp3".format(today)
     try:
-        generate_music(prompt_data["suno_prompt"])
+        generate_music(prompt_data["suno_prompt"], output_path=audio_path)
         print("[main] 音楽生成完了: {}".format(audio_path))
     except RuntimeError as e:
         print("[main] 音楽生成失敗、本日はスキップ: {}".format(e))
