@@ -2,18 +2,21 @@ import os
 import time
 import requests
 
+# 新しいSUNO APIは auth.suno.com ベースの JWT を直接使用
 SUNO_BASE = "https://studio-api.suno.ai"
 DEFAULT_OUTPUT = "/tmp/suno_output.mp3"
 
 
-def _get_jwt(cookie):
-    resp = requests.get(
-        "{}/api/auth/session".format(SUNO_BASE),
-        headers={"Cookie": cookie},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    return resp.json()["session"]["sunoToken"]
+def _extract_jwt(cookie_str):
+    """SUNO_COOKIE から JWT 値を取り出す。
+    形式: "__session=eyJ..." → "eyJ..." を返す
+    """
+    for part in cookie_str.split(";"):
+        part = part.strip()
+        if part.startswith("__session="):
+            return part[len("__session="):]
+    # フォールバック: 値全体を返す（旧形式のトークン文字列の場合）
+    return cookie_str.strip()
 
 
 def _poll_until_complete(clip_id, jwt, max_polls=40, interval=30):
@@ -25,30 +28,35 @@ def _poll_until_complete(clip_id, jwt, max_polls=40, interval=30):
             timeout=15,
         )
         resp.raise_for_status()
-        clip = resp.json()["clips"][0]
-        if clip["status"] == "complete" and clip.get("audio_url"):
-            return clip["audio_url"]
+        data = resp.json()
+        # 新APIは clips リストまたは直接オブジェクトを返す場合がある
+        clips = data.get("clips") or data.get("data") or [data]
+        if clips:
+            clip = clips[0]
+            if clip.get("status") == "complete" and clip.get("audio_url"):
+                return clip["audio_url"]
         time.sleep(interval)
     raise RuntimeError("タイムアウト: clip_id={} が{}回のポーリングで完了しなかった".format(clip_id, max_polls))
 
 
 def generate_music(suno_prompt, output_path=DEFAULT_OUTPUT, max_retries=3):
-    cookie = os.environ.get("SUNO_COOKIE", "")
+    cookie_str = os.environ.get("SUNO_COOKIE", "")
+    jwt = _extract_jwt(cookie_str)
     last_error = None
 
     for attempt in range(max_retries):
         try:
-            jwt = _get_jwt(cookie)
             headers = {
                 "Authorization": "Bearer {}".format(jwt),
                 "Content-Type": "application/json",
             }
             payload = {
                 "prompt": suno_prompt,
-                "mv": "chirp-v3-5",
+                "mv": "chirp-v4-5",  # 最新モデル
                 "title": "",
-                "tags": "instrumental ambient",
+                "tags": "instrumental ambient lofi",
                 "make_instrumental": True,
+                "generation_type": "TEXT",
             }
             gen_resp = requests.post(
                 "{}/api/generate/v2/".format(SUNO_BASE),
@@ -57,7 +65,9 @@ def generate_music(suno_prompt, output_path=DEFAULT_OUTPUT, max_retries=3):
                 timeout=30,
             )
             gen_resp.raise_for_status()
-            clip_id = gen_resp.json()["clips"][0]["id"]
+            resp_data = gen_resp.json()
+            clips = resp_data.get("clips") or resp_data.get("data") or [resp_data]
+            clip_id = clips[0]["id"]
 
             audio_url = _poll_until_complete(clip_id, jwt)
 
@@ -65,6 +75,7 @@ def generate_music(suno_prompt, output_path=DEFAULT_OUTPUT, max_retries=3):
             dl_resp.raise_for_status()
             with open(output_path, "wb") as f:
                 f.write(dl_resp.content)
+            print("[suno] 音楽生成完了: {}".format(output_path))
             return output_path
 
         except Exception as e:
