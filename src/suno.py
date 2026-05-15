@@ -3,21 +3,21 @@ import time
 import requests
 
 REPLICATE_API = "https://api.replicate.com/v1"
-# Meta MusicGen — バージョン指定なしで最新版を使用
-MUSICGEN_MODEL_URL = "{}/models/meta/musicgen/predictions".format(REPLICATE_API)
+# Meta MusicGen latest version (2024)
+MUSICGEN_VERSION = "671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb"
 DEFAULT_OUTPUT = "/tmp/suno_output.mp3"
 
 
 def _start_prediction(prompt, duration=60):
     token = os.environ["REPLICATE_API_TOKEN"]
     resp = requests.post(
-        MUSICGEN_MODEL_URL,
+        "{}/predictions".format(REPLICATE_API),
         headers={
             "Authorization": "Token {}".format(token),
             "Content-Type": "application/json",
-            "Prefer": "wait",
         },
         json={
+            "version": MUSICGEN_VERSION,
             "input": {
                 "prompt": prompt,
                 "model_version": "large",
