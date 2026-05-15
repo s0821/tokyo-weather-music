@@ -4,8 +4,12 @@ import tempfile
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from google.oauth2.credentials import Credentials
+from src.playlist import add_video_to_weekly_playlist
 
-YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+YOUTUBE_SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube",
+]
 
 
 def _build_service():
@@ -83,6 +87,11 @@ def upload_to_youtube(
                 ).execute()
             except Exception as thumb_err:
                 print("[youtube] サムネイル設定スキップ（チャンネル確認が必要）: {}".format(thumb_err))
+
+            try:
+                add_video_to_weekly_playlist(service, video_id)
+            except Exception as pl_err:
+                print("[playlist] プレイリスト追加スキップ: {}".format(pl_err))
 
             print("[youtube] アップロード完了: https://youtu.be/{}".format(video_id))
             return video_id

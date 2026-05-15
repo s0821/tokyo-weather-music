@@ -1,0 +1,100 @@
+import json
+import os
+import subprocess
+from datetime import datetime, timezone, timedelta
+
+JST = timezone(timedelta(hours=9))
+PLAYLISTS_FILE = os.path.join(os.path.dirname(__file__), "../data/playlists.json")
+
+
+def _load():
+    try:
+        with open(PLAYLISTS_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save(data):
+    os.makedirs(os.path.dirname(PLAYLISTS_FILE), exist_ok=True)
+    with open(PLAYLISTS_FILE, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _week_key(dt=None):
+    if dt is None:
+        dt = datetime.now(JST)
+    year, week, _ = dt.isocalendar()
+    return "{}-W{:02d}".format(year, week)
+
+
+def _week_label(dt=None):
+    if dt is None:
+        dt = datetime.now(JST)
+    year, week, _ = dt.isocalendar()
+    monday = dt - timedelta(days=dt.weekday())
+    sunday = monday + timedelta(days=6)
+    return "東京の天気音楽 {}年第{}週 ({}/{} - {}/{})".format(
+        year, week,
+        monday.month, monday.day,
+        sunday.month, sunday.day,
+    )
+
+
+def _create_playlist(service, title):
+    body = {
+        "snippet": {
+            "title": title,
+            "description": "東京の天気をテーマにしたインストゥルメンタル音楽。毎日4回、AIが自動生成しています。\n\n#東京 #天気 #ambient #lofi #instrumental",
+        },
+        "status": {"privacyStatus": "public"},
+    }
+    resp = service.playlists().insert(part="snippet,status", body=body).execute()
+    return resp["id"]
+
+
+def _add_to_playlist(service, playlist_id, video_id):
+    service.playlistItems().insert(
+        part="snippet",
+        body={
+            "snippet": {
+                "playlistId": playlist_id,
+                "resourceId": {"kind": "youtube#video", "videoId": video_id},
+            }
+        },
+    ).execute()
+
+
+def add_video_to_weekly_playlist(service, video_id):
+    key = _week_key()
+    data = _load()
+
+    if key not in data:
+        label = _week_label()
+        playlist_id = _create_playlist(service, label)
+        data[key] = {"id": playlist_id, "title": label}
+        _save(data)
+        print("[playlist] 週次プレイリスト作成: {} ({})".format(label, playlist_id))
+
+        if os.environ.get("GITHUB_ACTIONS"):
+            subprocess.run(
+                ["git", "add", "data/playlists.json"],
+                check=False,
+                cwd=os.path.join(os.path.dirname(__file__), ".."),
+            )
+            subprocess.run(
+                ["git", "commit", "-m", "data: add playlist for {}".format(key)],
+                check=False,
+                cwd=os.path.join(os.path.dirname(__file__), ".."),
+            )
+            subprocess.run(
+                ["git", "push"],
+                check=False,
+                cwd=os.path.join(os.path.dirname(__file__), ".."),
+            )
+    else:
+        playlist_id = data[key]["id"]
+
+    _add_to_playlist(service, playlist_id, video_id)
+    print("[playlist] プレイリストに追加: https://www.youtube.com/playlist?list={}".format(playlist_id))
+    return playlist_id
