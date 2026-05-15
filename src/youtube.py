@@ -76,10 +76,13 @@ def upload_to_youtube(
             ).execute()
             video_id = response["id"]
 
-            service.thumbnails().set(
-                videoId=video_id,
-                media_body=MediaFileUpload(thumbnail_path, mimetype="image/png"),
-            ).execute()
+            try:
+                service.thumbnails().set(
+                    videoId=video_id,
+                    media_body=MediaFileUpload(thumbnail_path, mimetype="image/png"),
+                ).execute()
+            except Exception as thumb_err:
+                print("[youtube] サムネイル設定スキップ（チャンネル確認が必要）: {}".format(thumb_err))
 
             print("[youtube] アップロード完了: https://youtu.be/{}".format(video_id))
             return video_id
