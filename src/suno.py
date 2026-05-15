@@ -8,7 +8,7 @@ MUSICGEN_VERSION = "671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837ee
 DEFAULT_OUTPUT = "/tmp/suno_output.mp3"
 
 
-def _start_prediction(prompt, duration=60):
+def _start_prediction(prompt, duration=600):
     token = os.environ["REPLICATE_API_TOKEN"]
     resp = requests.post(
         "{}/predictions".format(REPLICATE_API),
