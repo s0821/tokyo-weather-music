@@ -3,21 +3,21 @@ import time
 import requests
 
 REPLICATE_API = "https://api.replicate.com/v1"
-# Meta MusicGen large model
-MUSICGEN_VERSION = "671ac645ce5e552cc63a54a2bbff63fcf798043692f5338c52cd4341eb65b5"
+# Meta MusicGen — バージョン指定なしで最新版を使用
+MUSICGEN_MODEL_URL = "{}/models/meta/musicgen/predictions".format(REPLICATE_API)
 DEFAULT_OUTPUT = "/tmp/suno_output.mp3"
 
 
 def _start_prediction(prompt, duration=60):
     token = os.environ["REPLICATE_API_TOKEN"]
     resp = requests.post(
-        "{}/predictions".format(REPLICATE_API),
+        MUSICGEN_MODEL_URL,
         headers={
             "Authorization": "Token {}".format(token),
             "Content-Type": "application/json",
+            "Prefer": "wait",
         },
         json={
-            "version": MUSICGEN_VERSION,
             "input": {
                 "prompt": prompt,
                 "model_version": "large",
@@ -74,5 +74,7 @@ def generate_music(suno_prompt, output_path=DEFAULT_OUTPUT, max_retries=3):
         except Exception as e:
             last_error = e
             print("[suno] 試行 {} 失敗: {}".format(attempt + 1, e))
+            if attempt < max_retries - 1:
+                time.sleep(10)
 
     raise RuntimeError("SUNO音楽生成失敗（{}回試行）: {}".format(max_retries, last_error))
