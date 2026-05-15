@@ -2,8 +2,12 @@ import os
 import time
 import requests
 
-# 新しいSUNO APIは auth.suno.com ベースの JWT を直接使用
-SUNO_BASE = "https://studio-api.suno.ai"
+# SUNOのAPIエンドポイント（フォールバック付き）
+SUNO_BASES = [
+    "https://studio-api.suno.ai",
+    "https://suno.com",
+]
+SUNO_BASE = SUNO_BASES[0]
 DEFAULT_OUTPUT = "/tmp/suno_output.mp3"
 
 

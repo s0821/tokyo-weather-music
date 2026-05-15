@@ -92,11 +92,19 @@ def generate_prompt(weather, max_retries=3):
         try:
             message = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=512,
+                max_tokens=1024,
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": user_message}],
             )
-            return json.loads(message.content[0].text)
+            text = message.content[0].text.strip()
+            # マークダウンコードブロックを除去
+            if text.startswith("```"):
+                lines = text.splitlines()
+                text = "\n".join(
+                    l for l in lines
+                    if not l.startswith("```")
+                ).strip()
+            return json.loads(text)
         except Exception as e:
             last_error = e
 
