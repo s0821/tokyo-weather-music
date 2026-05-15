@@ -1,4 +1,6 @@
 import os
+import subprocess
+import tempfile
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from google.oauth2.credentials import Credentials
@@ -16,6 +18,26 @@ def _build_service():
         scopes=YOUTUBE_SCOPES,
     )
     return build("youtube", "v3", credentials=creds)
+
+
+def _mp3_to_mp4(audio_path, thumbnail_path):
+    out = tempfile.mktemp(suffix=".mp4")
+    subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-loop", "1", "-i", thumbnail_path,
+            "-i", audio_path,
+            "-c:v", "libx264", "-tune", "stillimage",
+            "-c:a", "aac", "-b:a", "192k",
+            "-pix_fmt", "yuv420p",
+            "-shortest",
+            out,
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return out
 
 
 def upload_to_youtube(
@@ -42,10 +64,11 @@ def upload_to_youtube(
         "status": {"privacyStatus": "public"},
     }
 
+    video_path = _mp3_to_mp4(audio_path, thumbnail_path)
     last_error = None
     for attempt in range(max_retries):
         try:
-            media = MediaFileUpload(audio_path, mimetype="audio/mpeg", resumable=True)
+            media = MediaFileUpload(video_path, mimetype="video/mp4", resumable=True)
             response = service.videos().insert(
                 part="snippet,status",
                 body=body,
