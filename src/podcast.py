@@ -12,18 +12,23 @@ JST = timezone(timedelta(hours=9))
 
 
 def _git_commit_push(timestamp):
-    subprocess.run(["git", "config", "user.email", "action@github.com"], check=True)
-    subprocess.run(["git", "config", "user.name", "GitHub Actions"], check=True)
-    subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=True)
-    subprocess.run(["git", "add", "docs/"], check=True)
+    repo = os.path.join(os.path.dirname(__file__), "..")
+    opts = {"check": True, "cwd": repo}
+
+    subprocess.run(["git", "config", "--global", "--add", "safe.directory", "/github/workspace"], **{**opts, "check": False})
+    subprocess.run(["git", "config", "user.email", "action@github.com"], **opts)
+    subprocess.run(["git", "config", "user.name", "GitHub Actions"], **opts)
+    subprocess.run(["git", "pull", "--rebase", "origin", "main"], **opts)
+    subprocess.run(["git", "add", "docs/"], **opts)
     result = subprocess.run(
         ["git", "commit", "-m", "podcast: add episode {}".format(timestamp)],
         capture_output=True,
+        cwd=repo,
     )
     if result.returncode != 0 and b"nothing to commit" in result.stdout + result.stderr:
         return
     result.check_returncode()
-    subprocess.run(["git", "push"], check=True)
+    subprocess.run(["git", "push"], **opts)
 
 
 def _add_episode_to_feed(
