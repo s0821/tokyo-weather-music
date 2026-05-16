@@ -1,6 +1,5 @@
 import os
 import shutil
-import subprocess
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -12,25 +11,8 @@ JST = timezone(timedelta(hours=9))
 
 
 def _git_commit_push(timestamp):
-    repo = os.environ.get("GITHUB_WORKSPACE") or os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..")
-    )
-    opts = {"check": True, "cwd": repo}
-
-    subprocess.run(["git", "config", "--global", "safe.directory", "*"], check=False)
-    subprocess.run(["git", "config", "user.email", "action@github.com"], **opts)
-    subprocess.run(["git", "config", "user.name", "GitHub Actions"], **opts)
-    subprocess.run(["git", "pull", "--rebase", "origin", "main"], **opts)
-    subprocess.run(["git", "add", "docs/"], **opts)
-    result = subprocess.run(
-        ["git", "commit", "-m", "podcast: add episode {}".format(timestamp)],
-        capture_output=True,
-        cwd=repo,
-    )
-    if result.returncode != 0 and b"nothing to commit" in result.stdout + result.stderr:
-        return
-    result.check_returncode()
-    subprocess.run(["git", "push"], **opts)
+    # git操作はワークフローYAMLで実行するため、ここでは何もしない
+    pass
 
 
 def _add_episode_to_feed(

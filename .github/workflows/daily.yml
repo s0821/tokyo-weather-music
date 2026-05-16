@@ -37,6 +37,7 @@ jobs:
 
       - name: Run daily music generation
         run: PYTHONPATH=. python src/main.py
+        id: generate
         env:
           ANTHROPIC_API_KEY:      ${{ secrets.ANTHROPIC_API_KEY }}
           SUNO_COOKIE:            ${{ secrets.SUNO_COOKIE }}
@@ -47,3 +48,10 @@ jobs:
           UNSPLASH_ACCESS_KEY:    ${{ secrets.UNSPLASH_ACCESS_KEY }}
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           GITHUB_TOKEN:           ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and push podcast/playlist updates
+        run: |
+          git add docs/ data/ || true
+          git diff --staged --quiet || git commit -m "podcast: add episode $(date -u +'%Y-%m-%d_%H%M')"
+          git push || true
+        if: always()
