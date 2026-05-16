@@ -12,10 +12,12 @@ JST = timezone(timedelta(hours=9))
 
 
 def _git_commit_push(timestamp):
-    repo = os.path.join(os.path.dirname(__file__), "..")
+    repo = os.environ.get("GITHUB_WORKSPACE") or os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..")
+    )
     opts = {"check": True, "cwd": repo}
 
-    subprocess.run(["git", "config", "--global", "--add", "safe.directory", "/github/workspace"], **{**opts, "check": False})
+    subprocess.run(["git", "config", "--global", "safe.directory", "*"], check=False)
     subprocess.run(["git", "config", "user.email", "action@github.com"], **opts)
     subprocess.run(["git", "config", "user.name", "GitHub Actions"], **opts)
     subprocess.run(["git", "pull", "--rebase", "origin", "main"], **opts)
