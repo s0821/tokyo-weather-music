@@ -11,11 +11,18 @@ DEFAULT_EPISODES_DIR = os.path.join(DOCS_DIR, "episodes")
 JST = timezone(timedelta(hours=9))
 
 
-def _git_commit_push(date):
+def _git_commit_push(timestamp):
     subprocess.run(["git", "config", "user.email", "action@github.com"], check=True)
     subprocess.run(["git", "config", "user.name", "GitHub Actions"], check=True)
+    subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=True)
     subprocess.run(["git", "add", "docs/"], check=True)
-    subprocess.run(["git", "commit", "-m", "podcast: add episode {}".format(date)], check=True)
+    result = subprocess.run(
+        ["git", "commit", "-m", "podcast: add episode {}".format(timestamp)],
+        capture_output=True,
+    )
+    if result.returncode != 0 and b"nothing to commit" in result.stdout + result.stderr:
+        return
+    result.check_returncode()
     subprocess.run(["git", "push"], check=True)
 
 
@@ -70,13 +77,14 @@ def update_feed(
     if base_url is None:
         base_url = "https://{}.github.io/tokyo-weather-music".format(owner)
 
-    dest = os.path.join(episodes_dir, "{}.mp3".format(date))
+    now_jst = datetime.now(JST)
+    timestamp = now_jst.strftime("%Y-%m-%d_%H%M")
+    dest = os.path.join(episodes_dir, "{}.mp3".format(timestamp))
     shutil.copy2(audio_path, dest)
 
-    mp3_url = "{}/episodes/{}.mp3".format(base_url, date)
+    mp3_url = "{}/episodes/{}.mp3".format(base_url, timestamp)
     file_size = Path(dest).stat().st_size
-    now_jst = datetime.now(JST)
-    pub_date = now_jst.strftime("%a, %d %b %Y 06:00:00 +0900")
+    pub_date = now_jst.strftime("%a, %d %b %Y %H:%M:%S +0900")
 
     _add_episode_to_feed(
         feed_path=feed_path,
@@ -85,13 +93,13 @@ def update_feed(
         mp3_url=mp3_url,
         file_size=file_size,
         pub_date=pub_date,
-        guid=date,
+        guid=timestamp,
     )
 
     last_error = None
     for attempt in range(max_retries):
         try:
-            _git_commit_push(date)
+            _git_commit_push(timestamp)
             print("[podcast] RSS更新・push完了: {}".format(mp3_url))
             return
         except subprocess.CalledProcessError as e:
