@@ -80,13 +80,10 @@ def upload_to_youtube(
             ).execute()
             video_id = response["id"]
 
-            try:
-                service.thumbnails().set(
-                    videoId=video_id,
-                    media_body=MediaFileUpload(thumbnail_path, mimetype="image/png"),
-                ).execute()
-            except Exception as thumb_err:
-                print("[youtube] サムネイル設定スキップ（チャンネル確認が必要）: {}".format(thumb_err))
+            service.thumbnails().set(
+                videoId=video_id,
+                media_body=MediaFileUpload(thumbnail_path, mimetype="image/png"),
+            ).execute()
 
             try:
                 add_video_to_weekly_playlist(service, video_id)
