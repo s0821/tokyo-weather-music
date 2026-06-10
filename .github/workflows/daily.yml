@@ -32,7 +32,7 @@ jobs:
       - name: Install ffmpeg and fluidsynth
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fluidsynth
+          sudo apt-get install -y ffmpeg fluidsynth fluid-soundfont-gm
 
       - name: Install dependencies
         run: pip install -r requirements.txt

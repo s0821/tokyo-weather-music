@@ -4,8 +4,11 @@ import subprocess
 import tempfile
 
 DEFAULT_OUTPUT = "/tmp/suno_output.mp3"
-SOUNDFONT_URL = "https://github.com/musescore/MuseScore/raw/master/share/sound/FluidR3Mono_GM.sf3"
-SOUNDFONT_PATH = "/tmp/soundfont.sf3"
+SOUNDFONT_CANDIDATES = [
+    "/usr/share/sounds/sf2/FluidR3_GM.sf2",       # fluid-soundfont-gm (Ubuntu)
+    "/usr/share/sounds/sf2/default-GM.sf2",
+    "/usr/share/soundfonts/FluidR3_GM.sf2",
+]
 
 # 天気・季節に対応するスケールとテンポ
 SCALE_MAP = {
@@ -88,17 +91,17 @@ def _generate_midi(prompt_data, duration_sec=180):
     return tmp
 
 
-def _download_soundfont():
-    if os.path.exists(SOUNDFONT_PATH):
-        return SOUNDFONT_PATH
-    print("[suno] サウンドフォントをダウンロード中...")
-    import urllib.request
-    urllib.request.urlretrieve(SOUNDFONT_URL, SOUNDFONT_PATH)
-    return SOUNDFONT_PATH
+def _find_soundfont():
+    for path in SOUNDFONT_CANDIDATES:
+        if os.path.exists(path):
+            return path
+    raise RuntimeError(
+        "サウンドフォントが見つかりません。fluid-soundfont-gm をインストールしてください"
+    )
 
 
 def _midi_to_mp3(midi_path, output_path):
-    sf = _download_soundfont()
+    sf = _find_soundfont()
     wav_path = tempfile.mktemp(suffix=".wav")
     subprocess.run(
         ["fluidsynth", "-ni", sf, midi_path, "-F", wav_path, "-r", "44100"],
