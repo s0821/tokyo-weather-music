@@ -30,7 +30,9 @@ jobs:
           git config --global safe.directory "$GITHUB_WORKSPACE"
 
       - name: Install ffmpeg and fluidsynth
-        run: sudo apt-get install -y ffmpeg fluidsynth
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fluidsynth
 
       - name: Install dependencies
         run: pip install -r requirements.txt
